@@ -19,7 +19,7 @@ export default function LoginPage() {
 
     try {
       const res = await authService.login(email, password);
-      login(res.token, res.user);
+      login(res.user); // No longer need to pass token
       navigate('/');
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Invalid email or password');

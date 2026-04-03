@@ -1,13 +1,12 @@
 import { api } from '../lib/api';
 import type { Role, User } from '../types';
 
-export type LoginResponse = {
-  token: string;
+export type AuthResponse = {
   user: User;
 };
 
 export const authService = {
-  async login(email: string, password: string): Promise<LoginResponse> {
+  async login(email: string, password: string): Promise<AuthResponse> {
     return api.post('/auth/login', { email, password });
   },
 
@@ -18,7 +17,15 @@ export const authService = {
     phone?: string;
     role: Role;
     vendorId?: string;
-  }): Promise<LoginResponse> {
+  }): Promise<AuthResponse> {
     return api.post('/auth/register', data);
+  },
+
+  async logout(): Promise<void> {
+    return api.post('/auth/logout');
+  },
+
+  async me(): Promise<User> {
+    return api.get('/auth/me');
   },
 };
