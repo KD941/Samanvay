@@ -106,7 +106,7 @@ describe('Security Vulnerability Exploration Tests', () => {
       // Should set httpOnly cookie
       const cookies = response.headers['set-cookie'];
       expect(cookies).toBeDefined();
-      expect(cookies.some((cookie: string) => 
+      expect(Array.isArray(cookies) && cookies.some((cookie: string) => 
         cookie.includes('httpOnly') && cookie.includes('authToken')
       )).toBe(true);
     });
@@ -267,7 +267,7 @@ describe('Security Vulnerability Exploration Tests', () => {
       
       // Simulate operation that causes database error
       try {
-        await mongoose.connection.db.collection('nonexistent').findOne({});
+        await mongoose.connection.db?.collection('nonexistent').findOne({});
       } catch (error) {
         // Error is expected
       }

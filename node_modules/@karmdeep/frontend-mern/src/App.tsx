@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { useEffect } from 'react';
 import { useAuthStore } from './stores/authStore';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/auth/LoginPage';
@@ -17,7 +18,12 @@ import AnalyticsPage from './pages/analytics/AnalyticsPage';
 import RequireRole from './components/auth/RequireRole';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, checkAuthStatus } = useAuthStore();
+
+  // Check authentication status on app startup
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   return (
     <>

@@ -120,3 +120,9 @@ export interface PaginatedResponse<T> {
   total?: number;
   nextToken?: string;
 }
+
+export interface ApiResponse<T = any> {
+  data?: T;
+  message?: string;
+  error?: string;
+}

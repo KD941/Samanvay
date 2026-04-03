@@ -9,7 +9,7 @@
  * The goal is to surface counterexamples that demonstrate security vulnerabilities exist.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAuthStore } from '../stores/authStore';
 
@@ -53,15 +53,13 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
         role: 'buyer' as const,
         name: 'Test User'
       };
-      
-      const mockToken = 'jwt-token-123';
 
       act(() => {
-        result.current.login(mockToken, mockUser);
+        result.current.login(mockUser);
       });
 
       // Should NOT store token in localStorage (XSS vulnerable)
-      expect(mockLocalStorage.setItem).not.toHaveBeenCalledWith('authToken', mockToken);
+      expect(mockLocalStorage.setItem).not.toHaveBeenCalledWith('authToken', expect.any(String));
       expect(mockLocalStorage.getItem('authToken')).toBeNull();
       
       // Should use secure storage mechanism instead
@@ -73,22 +71,10 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
       // **Validates: Requirements 1.5**
       // This test demonstrates the XSS vulnerability and will FAIL on unfixed code
       
-      // Simulate XSS attack scenario
-      const maliciousScript = `
-        // Simulated XSS payload that steals tokens
-        const stolenToken = localStorage.getItem('authToken');
-        if (stolenToken) {
-          // In real attack, this would send token to attacker's server
-          console.log('Token stolen:', stolenToken);
-          return stolenToken;
-        }
-        return null;
-      `;
-
       // Set up vulnerable state (current implementation)
       mockLocalStorage.setItem('authToken', 'sensitive-jwt-token');
       
-      // Execute malicious script (simulated)
+      // Execute malicious script (simulated XSS attack)
       const stolenToken = mockLocalStorage.getItem('authToken');
       
       // This should be null (secure) but will return token on unfixed code
@@ -129,19 +115,25 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
         role: 'buyer' as const,
         name: 'Test User'
       };
-      
-      // Simulate expired token (this would normally be detected by backend)
-      const expiredToken = 'expired-jwt-token';
 
       act(() => {
-        result.current.login(expiredToken, mockUser);
+        result.current.login(mockUser);
+      });
+
+      // Mock backend returning 401 for expired token
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 401
       });
 
       // Should automatically detect token expiration and clear state
+      await act(async () => {
+        await result.current.checkAuthStatus();
+      });
+
       // This will FAIL on unfixed code because there's no token validation
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.user).toBeNull();
-      expect(result.current.token).toBeNull();
     });
 
     it('should sync auth state with backend validation', async () => {
@@ -158,7 +150,7 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
       };
 
       act(() => {
-        result.current.login('valid-token', mockUser);
+        result.current.login(mockUser);
       });
 
       // Should validate token with backend and maintain sync
@@ -166,10 +158,10 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
       
       // Simulate backend rejecting token (401 response)
       // Should automatically clear frontend auth state
-      act(() => {
+      await act(async () => {
         // This should trigger auth state clear on 401 response
         // Will FAIL on unfixed code because there's no backend sync
-        result.current.logout();
+        await result.current.logout();
       });
 
       expect(result.current.isAuthenticated).toBe(false);
@@ -189,12 +181,21 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
       };
 
       act(() => {
-        result.current.login('expiring-token', mockUser);
+        result.current.login(mockUser);
       });
 
-      // Should automatically refresh token before expiration
+      // Mock successful auth check (token refresh handled by backend)
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockUser)
+      });
+
+      await act(async () => {
+        await result.current.checkAuthStatus();
+      });
+
+      // Should maintain authentication state after refresh
       // This will FAIL on unfixed code because refresh is not implemented
-      expect(result.current.token).not.toBe('expiring-token');
       expect(result.current.isAuthenticated).toBe(true);
     });
   });
@@ -210,12 +211,11 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
         id: 'user-123',
         email: 'admin@company.com',
         role: 'admin' as const,
-        name: 'Admin User',
-        permissions: ['read', 'write', 'delete']
+        name: 'Admin User'
       };
 
       act(() => {
-        result.current.login('admin-token', sensitiveUser);
+        result.current.login(sensitiveUser);
       });
 
       // Should not store sensitive user data in localStorage
@@ -234,8 +234,8 @@ describe('Frontend Security Vulnerability Exploration Tests', () => {
       
       const { result } = renderHook(() => useAuthStore());
       
-      // Should not rely on localStorage for authentication state
-      expect(result.current.token).toBeNull();
+      // Should not expose token in client-side state
+      expect(result.current).not.toHaveProperty('token');
       
       // Should get authentication state from secure cookies via API calls
       // This will FAIL on unfixed code because it uses localStorage

@@ -42,8 +42,8 @@ export default function RegisterPage() {
         vendorId: formData.role === 'vendor' ? (formData.vendorId || undefined) : undefined,
       });
 
-      // backend returns token on register, so log them in immediately
-      login(res.token, res.user);
+      // backend sets httpOnly cookie on register, so log them in immediately
+      login(res.user); // No longer need to pass token
       navigate('/');
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Registration failed. Please try again.');
