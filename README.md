@@ -1,4 +1,4 @@
-# KarmDeep Platform (MERN Conversion)
+#SAMANVAY (MERN Conversion)
 
 This folder is a **MERN-stack** conversion of the existing `design_engineering/` project.
 
